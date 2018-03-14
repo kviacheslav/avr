@@ -14,6 +14,93 @@ void Rover::init_sonar(void)
     sonar.init();
 }
 
+void Rover::init_wind_vane(void)
+{
+    uint8_t pin;
+    // 0:APM2 A0, 1:APM2 A1, ...
+    for (pin = 0; pin < 4; pin++){
+	    wind_vane_sensors[pin] = hal.analogin->channel(pin);
+    }
+}
+
+// should be called at 5hz
+void Rover::read_wind_vane(void)
+{
+    // Показания, считанные с датчиков
+    float sensor_reading[4];
+    // Храним максимальное показание каждого датчика и показания других датчиков в этот момент 
+    // Основываемся на том, что максимальное показание соответствует положению, когда магнитное поле перпендикулярно плоскости датчика,
+	// т.е. магнит напротив датчика.	
+    static float sensor_max_pos[4][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+	
+	uint8_t pin;
+	uint8_t j;
+	float tmp = 0;
+	float dev;
+	float wnd;
+	uint8_t max_i;
+	uint8_t right_i;
+	uint8_t left_i;	
+	uint8_t pair;
+	
+	// Считываем усредненные показания с датчиков	
+	for (pin = 0; pin < 4; pin++){
+		sensor_reading[pin] = wind_vane_sensors[pin]->read_average();
+		// Определяем датчик с максимальным показанием
+		if (sensor_reading[pin] > tmp){
+			max_i = pin;
+			tmp = sensor_reading[pin];			
+		}
+    }
+	// Запоминаем максимальное показание каждого датчика и показания других датчиков в этот момент 
+	// "калибровка на лету"
+    for (pin = 0; pin < 4; pin++){        
+        if (sensor_reading[pin] > sensor_max_pos[pin][pin]){
+		    for( j = 0; j < 4; j++)
+                sensor_max_pos[pin][j] = sensor_reading[j];	
+        }
+    }
+	
+    // Датчик слева 
+    if (max_i == 0)
+		left_i = 3;
+    else
+        left_i = max_i - 1; 
+	
+ 	// Датчик справа
+	if (max_i == 3)
+		right_i = 0;
+	else
+        right_i = max_i + 1;
+	
+    //   
+    if ((sensor_reading[right_i]- sensor_max_pos[max_i][right_i]) > (sensor_reading[left_i]-sensor_max_pos[max_i][left_i]))
+        pair = right_i;
+    else
+        pair = left_i;
+	
+    // апроксимация пропорциональная 
+	tmp = sensor_max_pos[max_i][max_i] - sensor_reading[max_i];
+	dev = tmp + sensor_max_pos[pair][pair] - sensor_reading[pair];
+	
+	// прошли колибровку ?
+    if (dev > 0){ 
+		dev = 90 * (tmp / dev);
+		wnd = mechanical_relative_bearing[max_i];
+		if (pair == right_i){
+		    wnd += dev;
+			if ( wnd >= 360.0f )
+			    wnd -= 360.0f;
+		}
+	    else{
+		    wnd -= dev;
+		    if ( wnd < 0.0f )
+			    wnd += 360.0f;
+	    }	
+		apparent_wind = wnd;
+	}	
+}
+
 // read_battery - reads battery voltage and current and invokes failsafe
 // should be called at 10hz
 void Rover::read_battery(void)

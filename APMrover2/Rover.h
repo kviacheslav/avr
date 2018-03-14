@@ -20,8 +20,8 @@
 #ifndef _ROVER_H_
 #define _ROVER_H_
 
-#define THISFIRMWARE "ArduRover v2.52-beta"
-#define FIRMWARE_VERSION 2,52,0,FIRMWARE_VERSION_TYPE_BETA
+#define THISFIRMWARE "ArduRover v2.62-alfa"
+#define FIRMWARE_VERSION 2,62,0,FIRMWARE_VERSION_TYPE_BETA
 
 #include <math.h>
 #include <stdarg.h>
@@ -365,7 +365,12 @@ private:
     bool active_loiter; // TRUE if we actively return to the loitering waypoint if we drift off
     bool previously_reached_wp;  // set to true if we have EVER reached the waypoint
     float distance_past_wp; // record the distance we have gone past the wp
-
+	
+    // Apparent wind 
+    AP_HAL::AnalogSource* wind_vane_sensors[4]; // There are 4 Hall sensors
+    const uint16_t mechanical_relative_bearing[4] = {315,45,135,225};
+    float apparent_wind = 0.0f; // Relative bearing of the wind in degrees from 0 to 360
+    
 private:
     // private member functions
     void ahrs_update();
@@ -396,6 +401,7 @@ private:
     void send_rangefinder(mavlink_channel_t chan);
     void send_current_waypoint(mavlink_channel_t chan);
     void send_statustext(mavlink_channel_t chan);
+    void send_wind_vane(mavlink_channel_t chan);
     bool telemetry_delayed(mavlink_channel_t chan);
     void gcs_send_message(enum ap_message id);
     void gcs_send_mission_item_reached_message(uint16_t mission_index);
@@ -457,6 +463,8 @@ private:
     void trim_radio();
     void init_barometer(void);
     void init_sonar(void);
+    void init_wind_vane(void);
+    void read_wind_vane(void);
     void read_battery(void);
     void read_receiver_rssi(void);
     void read_sonars(void);

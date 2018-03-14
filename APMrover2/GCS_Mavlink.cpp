@@ -5,6 +5,11 @@
 // default sensors are present and healthy: gyro, accelerometer, rate_control, attitude_stabilization, yaw_position, altitude control, x/y position control, motor_control
 #define MAVLINK_SENSOR_PRESENT_DEFAULT (MAV_SYS_STATUS_SENSOR_3D_GYRO | MAV_SYS_STATUS_SENSOR_3D_ACCEL | MAV_SYS_STATUS_SENSOR_ANGULAR_RATE_CONTROL | MAV_SYS_STATUS_SENSOR_ATTITUDE_STABILIZATION | MAV_SYS_STATUS_SENSOR_YAW_POSITION | MAV_SYS_STATUS_SENSOR_XY_POSITION_CONTROL | MAV_SYS_STATUS_SENSOR_MOTOR_OUTPUTS | MAV_SYS_STATUS_AHRS)
 
+void Rover::send_wind_vane(mavlink_channel_t chan)
+{
+    mavlink_msg_wind_send(chan, apparent_wind, 0, 0);
+}
+
 void Rover::send_heartbeat(mavlink_channel_t chan)
 {
     uint8_t base_mode = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
@@ -552,10 +557,14 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
 #endif // MOUNT == ENABLED
         break;
 
+    case MSG_WIND:
+        CHECK_PAYLOAD_SIZE(WIND);
+        rover.send_wind_vane(chan);
+        break;
+		
     case MSG_RAW_IMU2:
     case MSG_LIMITS_STATUS:
     case MSG_FENCE_STATUS:
-    case MSG_WIND:
     case MSG_VIBRATION:
         // unused
         break;
@@ -763,6 +772,7 @@ GCS_MAVLINK::data_stream_send(void)
     if (stream_trigger(STREAM_RAW_SENSORS)) {
         send_message(MSG_RAW_IMU1);
         send_message(MSG_RAW_IMU3);
+        send_message(MSG_WIND);
     }
 
     if (rover.gcs_out_of_time) return;

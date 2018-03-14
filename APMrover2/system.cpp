@@ -184,6 +184,9 @@ void Rover::init_ardupilot()
     camera_mount.init(serial_manager);
 #endif
 
+    // initialise wind vane
+    init_wind_vane();	
+
     /*
       setup the 'main loop is dead' check. Note that this relies on
       the RC library being initialised.
