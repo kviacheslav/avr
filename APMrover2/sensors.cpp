@@ -1,4 +1,4 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
+﻿// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 
 #include "Rover.h"
 
@@ -38,7 +38,7 @@ void Rover::read_wind_vane(void)
 	float tmp = 0;
 	float dev;
 	float wnd;
-	uint8_t max_i;
+	uint8_t max_i = 0;
 	uint8_t right_i;
 	uint8_t left_i;	
 	uint8_t pair;
@@ -83,10 +83,11 @@ void Rover::read_wind_vane(void)
 	tmp = sensor_max_pos[max_i][max_i] - sensor_reading[max_i];
 	dev = tmp + sensor_max_pos[pair][pair] - sensor_reading[pair];
 	
-	// прошли колибровку ?
+	// прошли калибровку ?
     if (dev > 0){ 
 		dev = 90 * (tmp / dev);
-		wnd = mechanical_relative_bearing[max_i];
+		wnd = mechanical_relative_bearing[max_i] + // Поправка датчиков флюгера относительно нулевого КУ
+                g.pivot_turn_angle;
 		if (pair == right_i){
 		    wnd += dev;
 			if ( wnd >= 360.0f )
